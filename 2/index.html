@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Karaoke Live 🎤</title>
+<style>
+  body { font-family: sans-serif; background:#222; color:#eee; text-align:center; padding:20px; }
+  label { display:block; margin-top:10px; }
+  input[type=range] { width:300px; }
+</style>
+</head>
+<body>
+<h1>Karaoke Live 🎤</h1>
+<p>Tu voz se oye en vivo. Ajusta EQ y prueba efectos.</p>
+
+<label>Bajos: <input type="range" id="bass" min="-30" max="30" value="0"></label>
+<label>Medios: <input type="range" id="mid" min="-30" max="30" value="0"></label>
+<label>Agudos: <input type="range" id="treble" min="-30" max="30" value="0"></label>
+<label>Autotune (sutil): <input type="checkbox" id="autotune"></label>
+
+<script>
+(async function(){
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  const source = audioCtx.createMediaStreamSource(stream);
+
+  // EQ simples
+  const bass = audioCtx.createBiquadFilter();
+  bass.type = "lowshelf"; bass.frequency.value = 200;
+  const mid = audioCtx.createBiquadFilter();
+  mid.type = "peaking"; mid.frequency.value = 1000; mid.Q.value=1;
+  const treble = audioCtx.createBiquadFilter();
+  treble.type = "highshelf"; treble.frequency.value = 3000;
+
+  // Ganancia para efecto autotune
+  const gainNode = audioCtx.createGain();
+
+  // Conectar cadena: source -> EQ -> ganancia -> destino
+  source.connect(bass);
+  bass.connect(mid);
+  mid.connect(treble);
+  treble.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  // Controles EQ
+  document.getElementById('bass').addEventListener('input', e=> bass.gain.value = +e.target.value);
+  document.getElementById('mid').addEventListener('input', e=> mid.gain.value = +e.target.value);
+  document.getElementById('treble').addEventListener('input', e=> treble.gain.value = +e.target.value);
+
+  // Autotune simple sin cortar voz
+  let shaper;
+  document.getElementById('autotune').addEventListener('change', e=>{
+    if(e.target.checked){
+      if(!shaper){
+        shaper = audioCtx.createWaveShaper();
+        const curve = new Float32Array(65536);
+        for(let i=0;i<65536;i++){
+          let x = (i-32768)/32768;
+          curve[i] = Math.sign(x)*Math.pow(Math.abs(x),0.7); // efecto sutil
+        }
+        shaper.curve = curve;
+      }
+      treble.disconnect();
+      treble.connect(shaper);
+      shaper.connect(gainNode);
+    } else {
+      if(shaper) shaper.disconnect();
+      treble.disconnect();
+      treble.connect(gainNode);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
