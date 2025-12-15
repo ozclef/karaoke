@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Micro en Vivo 🎤</title>
+<style>
+  body { font-family: sans-serif; background:#222; color:#eee; text-align:center; padding:30px; }
+  button { padding:10px 20px; font-size:16px; margin-top:20px; cursor:pointer; }
+  #status { margin-top:20px; font-size:18px; }
+</style>
+</head>
+<body>
+<h1>Microfono en Vivo 🎤</h1>
+<p>Tu voz se reproduce en tiempo real.</p>
+
+<button id="startBtn">Activar Micrófono</button>
+<div id="status">Micrófono apagado ❌</div>
+
+<script>
+const startBtn = document.getElementById('startBtn');
+const status = document.getElementById('status');
+
+startBtn.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    source.connect(audioCtx.destination); // reproduccion en tiempo real
+
+    status.textContent = "Micrófono activo ✅";
+    startBtn.disabled = true;
+  } catch(err) {
+    console.error(err);
+    status.textContent = "Error al activar micrófono ❌";
+  }
+});
+</script>
+</body>
+</html>
